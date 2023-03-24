@@ -1,4 +1,4 @@
-# markdown notes to bear notes text bundle
+# Markdown notes to bear notes text bundle
 
 [中文](README_zh.md) [日本語](README_jp.md)
 
