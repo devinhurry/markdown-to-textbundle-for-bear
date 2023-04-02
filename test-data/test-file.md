@@ -13,3 +13,7 @@
 [[file title name not same]]
 
 ![](filenotexist.md)
+
+![[subfile]]
+
+![](Image (4).png)

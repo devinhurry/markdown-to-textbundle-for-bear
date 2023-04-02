@@ -6,6 +6,7 @@ import urllib.parse
 import argparse
 import yaml
 
+files_map = {}
 
 def read_file(file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -19,11 +20,26 @@ def write_file(file_path, content):
 
 def get_files(dir_path):
     files = []
+    global files_map
     for root, dirs, file_names in os.walk(dir_path):
         for file_name in file_names:
             file_path = os.path.join(root, file_name)
+            files_map[file_name] = file_path
             files.append(file_path)
     return files
+
+
+def find_file(file_path):
+    if os.path.exists(file_path):
+        return file_path
+    global files_map
+    file_name = os.path.basename(file_path)
+    if file_name in files_map:
+        found_file = files_map[file_name]
+        #print('Globally found file {} in {}, original path is {}'.format(
+        #    file_name, found_file, file_path))
+        return found_file
+    return None
 
 
 def parse_front_matter(content):
@@ -70,7 +86,10 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
 
     # Find all links in the markdown
     # find patter like this ![somefile](somefile)
-    links_pattern = re.compile(r'(\[.*?\]\((.*?)\))')
+    # links_pattern = re.compile(r'(\[.*?\]\((.*?)\))')
+    # Dealing with nested paranthesis
+    links_pattern = re.compile(r'(\[.*?\]\(((?:[^()]|\((?:[^()]*\)))+)\))')
+
     # find patter like this ![[somefile]]
     wiki_links_pattern = re.compile(r'(\!\[\[(.*?)\]\])')
     links = links_pattern.finditer(content)
@@ -136,7 +155,7 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
         if original_link.startswith('http://') or original_link.startswith('https://'):
             return
         # if starts with [a-zA-Z]+:, return
-        if re.match(r'^[a-zA-Z\-0-9]+:', original_link):
+        if re.match(r'^[a-zA-Z\-0-9\.]+:', original_link):
             return
         unquoted_filename = urllib.parse.unquote(original_link)
 
@@ -159,9 +178,11 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
 
         true_file_name = urllib.parse.unquote(original_link)
         file_path = os.path.join(os.path.dirname(md_path), true_file_name)
+        backup_filepath = file_path
+        file_path = find_file(file_path)
 
         # Case 2: ![[markdown file]] => [[markdown file]]
-        if is_wiki_link and ext == "" and not os.path.exists(file_path) and os.path.exists(file_path + '.md'):
+        if is_wiki_link and ext == "" and not file_path and find_file(backup_filepath + '.md'):
             source_pattern = '![[{}]]'
             dest_pattern = '[[{}]]'
             markdown_content = markdown_content.replace(source_pattern.format(original_link),
@@ -171,8 +192,7 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
         # Othercase: ![](./media file.png) => ![](./assets/media file.png)
         #            ![[media file.png/jpeg/pdf...so on]] => ![](./assets/media file.png)
         # copy file to textbundle/assets
-        if os.path.exists(file_path):
-
+        if file_path:
             if is_wiki_link:
                 source_pattern = '![[{}]]'
                 dest_pattern = '![]({})'
@@ -185,7 +205,7 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
                 assetsPath, os.path.basename(true_file_name)))
         else:
             # This case ![](media file.png) or ![[media file.png]] is not exist
-            print('link not exist: {} in markdown file {}'.format(
+            print('file in link not found: {} in Markdown file {}'.format(
                 full_link, md_path))
             pass
 
