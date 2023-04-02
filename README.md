@@ -16,10 +16,10 @@ exported file will be in `your-markdown-folder-export`
 - Copy attachments to the text bundle
 - Support obsidian's `![[file]]` format
 - Convert `[](markdown.md)` to `[[markdown]]`
-- Change file name to first line of document (because bear takes first line as title by default)
-- Preserve modification time
-- Optionally use subfolder names as tags (with `--tags`)
+- Insert file name(or title in front matter) as title to first line of document (because bear takes first line as title by default)
+- Preserve modification time (take modify time from front matter if has one)
+- Optionally use subfolder name as tags (with `--tags`)
 - Retrieve information from front matter
 - Tested apps
     - Obsidian
-    - Joplin(Markdown and Markdown + Front Matter)
+    - Joplin(exported as Markdown or Markdown + Front Matter)
