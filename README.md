@@ -15,6 +15,8 @@ exported file will be in `your-markdown-folder-export`
 # Features
 - Copy attachments to the text bundle
 - Support obsidian's `![[file]]` format
+- Convert `[](markdown.md)` to `[[markdown]]`
+- Change file name to first line of document (because bear takes first line as title by default)
 - Preserve modification time
 - Optionally use subfolder names as tags (with `--tags`)
 - Retrieve information from front matter

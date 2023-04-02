@@ -1,1 +1,4 @@
 .DS_Store
+.obsidian
+__pycache__
+test-data-export
