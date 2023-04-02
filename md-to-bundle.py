@@ -59,7 +59,7 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
     if add_tag and len(tag) > 0:
         tags.append(tag)
     if len(tags) > 0:
-        # escape 
+        # escape
         escaped_tags = []
         for t in tags:
             escaped_tags.append(''.join(c for c in t if re.match(r'\w', c)))
@@ -68,15 +68,13 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
         # insert tag in end of file
         content = content + '\n#{}'.format(fm_tags_str)
 
-
     # Find all links in the markdown
     # find patter like this ![somefile](somefile)
-    links_pattern = re.compile(r'\[.*?\]\((.*?)\)')
+    links_pattern = re.compile(r'(\[.*?\]\((.*?)\))')
     # find patter like this ![[somefile]]
-    wiki_links_pattern = re.compile(r'\!\[\[(.*?)\]\]')
-    links = links_pattern.findall(content)
-    wiki_links = wiki_links_pattern.findall(content)
-
+    wiki_links_pattern = re.compile(r'(\!\[\[(.*?)\]\])')
+    links = links_pattern.finditer(content)
+    wiki_links = wiki_links_pattern.finditer(content)
 
     # Because bear use document first line as title by default,
     # we need to insert title in front of markdown content if the first line is not title
@@ -91,7 +89,7 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
         if line.strip():
             line = line.strip()
             break
-    ### remove #+\s
+    # remove #+\s
     line = re.sub(r'^#+\s', '', line)
     if line == "":
         content = content + '\n#{}'.format(md_title)
@@ -100,8 +98,8 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
         if end_index == 0:
             content = '# {}\n'.format(md_title) + content
         else:
-            content = content[:end_index] + '\n# {}\n'.format(md_title) + content[end_index:]
-
+            content = content[:end_index] + \
+                '\n# {}\n'.format(md_title) + content[end_index:]
 
     # Create textbundle dir
     bundle_path = os.path.join(
@@ -124,42 +122,49 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
 
     # Many cases included
     # Case 1: ![](./markdown file.md) => [[markdown file]] [](./markdown file.md) => [[markdown file]]
-    # Case 2: ![[markdown file]] => [[markdown file]] 
+    # Case 2: ![[markdown file]] => [[markdown file]]
     # Othercase: ![](./media file.png) => ![](./assets/media file.png)
     #           ![[media file.png/jpeg/pdf...so on]] => ![](./assets/media file.png)
 
-    def copy_and_replace_assets(original_file_name, is_wiki_link):
+    def copy_and_replace_assets(full_link, original_link, is_wiki_link):
         nonlocal markdown_content, assetsPath
         # replace path to assets/file_name
-
-        unquoted_filename = urllib.parse.unquote(original_file_name)
+        if original_link == '':
+            return
+        if original_link.startswith('#'):
+            return
+        if original_link.startswith('http://') or original_link.startswith('https://'):
+            return
+        # if starts with [a-zA-Z]+:, return
+        if re.match(r'^[a-zA-Z\-0-9]+:', original_link):
+            return
+        unquoted_filename = urllib.parse.unquote(original_link)
 
         # if it is a markdown file, replace it with wiki link
-         # Case 1: ![](./markdown file.md) => [[markdown file]] [](./markdown file.md) => [[markdown file]]
+        # Case 1: ![](./markdown file.md) => [[markdown file]] [](./markdown file.md) => [[markdown file]]
         basename = os.path.basename(unquoted_filename)
         ext = os.path.splitext(basename)[1]
         title = os.path.splitext(basename)[0]
         if ext == '.md':
             # reg replace ![.*](./markdown file.md) to ![[markdown file]]
-            escaped_file_name = re.escape(original_file_name)
+            escaped_file_name = re.escape(original_link)
             markdown_content = re.sub(
                 rf'!\[.*\]\({escaped_file_name}\)', '[[{}]]'.format(title), markdown_content)
             markdown_content = re.sub(
-                rf'\[.*\]\({escaped_file_name}\)', '[[{}]]'.format(title), markdown_content)            
+                rf'\[.*\]\({escaped_file_name}\)', '[[{}]]'.format(title), markdown_content)
             return
 
         quotedfile_name = urllib.parse.quote(
             os.path.basename(unquoted_filename))
 
-
-        true_file_name = urllib.parse.unquote(original_file_name)
+        true_file_name = urllib.parse.unquote(original_link)
         file_path = os.path.join(os.path.dirname(md_path), true_file_name)
 
         # Case 2: ![[markdown file]] => [[markdown file]]
         if is_wiki_link and ext == "" and not os.path.exists(file_path) and os.path.exists(file_path + '.md'):
             source_pattern = '![[{}]]'
             dest_pattern = '[[{}]]'
-            markdown_content = markdown_content.replace(source_pattern.format(original_file_name),
+            markdown_content = markdown_content.replace(source_pattern.format(original_link),
                                                         dest_pattern.format(unquoted_filename))
             return
 
@@ -174,31 +179,25 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
             else:
                 source_pattern = '{}'
                 dest_pattern = '{}'
-            markdown_content = markdown_content.replace(source_pattern.format(original_file_name),
+            markdown_content = markdown_content.replace(source_pattern.format(original_link),
                                                         dest_pattern.format(os.path.join('assets', quotedfile_name)))
             shutil.copyfile(file_path, os.path.join(
                 assetsPath, os.path.basename(true_file_name)))
         else:
             # This case ![](media file.png) or ![[media file.png]] is not exist
-            print('link not exist: {} in markdown file {}'.format(file_path, md_path))
+            print('link not exist: {} in markdown file {}'.format(
+                full_link, md_path))
             pass
 
     # Copy files to assets dir and replace path
-    for original_file_name in links:
-        if original_file_name.startswith('http'):
-            continue
-
-        if original_file_name == '':
-            print('filename is empty {}'.format(md_path))
-            continue
-        copy_and_replace_assets(original_file_name, is_wiki_link=False)
+    for matches in links:
+        copy_and_replace_assets(matches.group(
+            1), matches.group(2), is_wiki_link=False)
 
     # Copy files to assets dir and replace path (for ![[file]])
-    for original_file_name in wiki_links:
-        if original_file_name == '':
-            print('filename is empty {}'.format(md_path))
-            continue
-        copy_and_replace_assets(original_file_name, is_wiki_link=True)
+    for matches in wiki_links:
+        copy_and_replace_assets(matches.group(
+            1), matches.group(2), is_wiki_link=True)
 
     markdownContentPath = os.path.join(bundle_path, 'text.md')
     write_file(markdownContentPath, markdown_content)
