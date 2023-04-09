@@ -1,3 +1,8 @@
+---
+tags:
+  - tag1
+  - tag2/tag3
+---
 # test-file
 ![img 1](assets%20folder%20with%20space/image%20with%20space.png)
 ![file with space](file%20with%20space.md)

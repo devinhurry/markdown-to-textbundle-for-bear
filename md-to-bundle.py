@@ -36,8 +36,6 @@ def find_file(file_path):
     file_name = os.path.basename(file_path)
     if file_name in files_map:
         found_file = files_map[file_name]
-        #print('Globally found file {} in {}, original path is {}'.format(
-        #    file_name, found_file, file_path))
         return found_file
     return None
 
@@ -49,11 +47,9 @@ def parse_front_matter(content):
         end_index = content.find('---', 3)
         if end_index > 0:
             front_matter_content = content[3:end_index]
-            # parse as yaml
             front_matter = yaml.load(
                 front_matter_content, Loader=yaml.FullLoader)
             end_index += 3
-
     return front_matter, end_index
 
 
@@ -74,15 +70,13 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
             tags = [tags]
     if add_tag and len(tag) > 0:
         tags.append(tag)
+
+
     if len(tags) > 0:
-        # escape
-        escaped_tags = []
-        for t in tags:
-            escaped_tags.append(''.join(c for c in t if re.match(r'\w', c)))
-        fm_tags_str = ' #'.join(escaped_tags)
-        fm_tags_str = fm_tags_str.lstrip()
+        fm_tags_str = '# #'.join(tags)
         # insert tag in end of file
-        content = content + '\n#{}'.format(fm_tags_str)
+        content = content + '\n#{}#'.format(fm_tags_str)
+
 
     # Find all links in the markdown
     # find patter like this ![somefile](somefile)
@@ -274,14 +268,11 @@ def main():
     count = 0
     for file in files:
         if file.endswith(".md"):
-            # get relative dir
-            relative_dir = os.path.dirname(
-                file).replace(markdown_notes_dir, '')
-            tag = relative_dir.lstrip(os.sep)
+            relative_path = os.path.relpath(file, markdown_notes_dir)
+            tag = os.path.dirname(relative_path).strip(os.path.sep)
             md_to_bundle(file, add_tag, tag, export_dir)
             count += 1
     print('Exported to {}, Total count: {}'.format(export_dir, count))
-
 
 if __name__ == '__main__':
     main()
