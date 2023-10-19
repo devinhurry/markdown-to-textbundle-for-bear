@@ -57,6 +57,10 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
     content = read_file(md_path)
     front_matter, end_index = parse_front_matter(content)
     basename = os.path.basename(md_path)
+    
+    # Ensure front_matter is a dictionary
+    if not isinstance(front_matter, dict):
+        front_matter = {}
 
     # Dealing with tags
     if front_matter is not None:
