@@ -6,11 +6,19 @@
 - python 3 required
 - pip install -r requirements.txt
 
+## Summary
+Takes as input the name of a folder containing markdown files
+and their associated images and attachments, and creates a `.textbundle` for each markdown file.
+Each `.textbundle` also contains any images or attachments used by the markdown file.
+It can handle both markdown and images/attachments held in subfolders.
+
+
 ## Usage
 1. `python md-to-bundle.py your-markdown-folder`
 2. use subfolder names as tags: `python md-to-bundle.py your-markdown-folder --tags`
 
-exported file will be in `your-markdown-folder-export`
+
+The exported `textbundle` files will be in `your-markdown-folder-export`
 
 # Features
 - Copy attachments to the text bundle
@@ -22,4 +30,6 @@ exported file will be in `your-markdown-folder-export`
 - Retrieve information from front matter
 - Tested apps
     - Obsidian
-    - Joplin(exported as Markdown or Markdown + Front Matter)
+    - Joplin (exported as Markdown or Markdown + Front Matter)
+    - Upnote (exported as Markdown)
+        - Use the `--tags` option in order to capture Upnote 'Notebooks' as nested tags
