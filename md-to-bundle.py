@@ -59,7 +59,7 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
     basename = os.path.basename(md_path)
 
     # Dealing with tags
-    if front_matter is not None:
+    if isinstance(front_matter, dict):
         tags = front_matter.get('tags', [])
     else:
         tags = []
@@ -137,7 +137,9 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
     # Case 2: ![[markdown file]] => [[markdown file]]
     # Othercase: ![](./media file.png) => ![](./assets/media file.png)
     #           ![[media file.png/jpeg/pdf...so on]] => ![](./assets/media file.png)
-
+    # params:
+    # full_link example: ![](./markdown file.md)
+    # original_link example: "./markdown file.md"
     def copy_and_replace_assets(full_link, original_link, is_wiki_link):
         nonlocal markdown_content, assetsPath
         # replace path to assets/file_name
@@ -147,7 +149,7 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
             return
         if original_link.startswith('http://') or original_link.startswith('https://'):
             return
-        # if starts with [a-zA-Z]+:, return
+        # if starts with [a-zA-Z]+:, eg. app: tel: return
         if re.match(r'^[a-zA-Z\-0-9\.]+:', original_link):
             return
         unquoted_filename = urllib.parse.unquote(original_link)
@@ -157,7 +159,7 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
         basename = os.path.basename(unquoted_filename)
         ext = os.path.splitext(basename)[1]
         title = os.path.splitext(basename)[0]
-        if ext == '.md':
+        if ext.lower() == '.md':
             # reg replace ![.*](./markdown file.md) to ![[markdown file]]
             escaped_file_name = re.escape(original_link)
             markdown_content = re.sub(
@@ -166,24 +168,31 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
                 rf'\[.*\]\({escaped_file_name}\)', '[[{}]]'.format(title), markdown_content)
             return
 
+
         quotedfile_name = urllib.parse.quote(
             os.path.basename(unquoted_filename))
 
+        # the file link in markdown maybe urlencoded so we need to unquote to get true_file_name
         true_file_name = urllib.parse.unquote(original_link)
+        # we guess the the link file is in same folder with markdown file(md_path), 
+        # if not, find globally (find_file(file_path))
         file_path = os.path.join(os.path.dirname(md_path), true_file_name)
         backup_filepath = file_path
         file_path = find_file(file_path)
 
         # Case 2: ![[markdown file]] => [[markdown file]]
-        if is_wiki_link and ext == "" and not file_path and find_file(backup_filepath + '.md'):
+        # we cannot find "markdown file" but can find "markdown file.md"
+        if is_wiki_link and not file_path and find_file(backup_filepath + '.md'):
             source_pattern = '![[{}]]'
             dest_pattern = '[[{}]]'
+            # in wikilink, we need unquoted_filename
             markdown_content = markdown_content.replace(source_pattern.format(original_link),
                                                         dest_pattern.format(unquoted_filename))
             return
 
         # Othercase: ![](./media file.png) => ![](./assets/media file.png)
         #            ![[media file.png/jpeg/pdf...so on]] => ![](./assets/media file.png)
+        # all cases not link to a markdown file fallback to this case
         # copy file to textbundle/assets
         if file_path:
             if is_wiki_link:
@@ -217,7 +226,7 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
 
     # Preserve creat time and modify time
     has_front_matter_time = False
-    if front_matter is not None:
+    if isinstance(front_matter, dict):
         ctime = front_matter.get('created', None)
         mtime = front_matter.get('updated', None)
         if ctime is None:
