@@ -71,8 +71,7 @@ def md_to_bundle(md_path, add_tag, tag, export_dir):
     if add_tag and len(tag) > 0:
         tags.append(tag)
 
-
-    if len(tags) > 0:
+    if tags is not None and len(tags) > 0:
         fm_tags_str = '# #'.join(tags)
         # insert tag in end of file
         content = content + '\n#{}#'.format(fm_tags_str)
